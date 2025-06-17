@@ -1,0 +1,29 @@
+import React from 'react';
+import { Routes, Route } from 'react-router-dom';
+import Sidebar from '../Sidebar';
+import Terminal from '../Terminal';
+import GlobalChat from '../Chat/GlobalChat';
+import Articles from '../Content/Articles';
+import Videos from '../Content/Videos';
+import Profile from '../Profile';
+import Groups from '../Groups';
+
+function Dashboard() {
+  return (
+    <div className="dashboard">
+      <Sidebar />
+      <main>
+        <Routes>
+          <Route path="terminal" element={<Terminal />} />
+          <Route path="chat" element={<GlobalChat />} />
+          <Route path="articles" element={<Articles />} />
+          <Route path="videos" element={<Videos />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="groups" element={<Groups />} />
+        </Routes>
+      </main>
+    </div>
+  );
+}
+
+export default Dashboard;

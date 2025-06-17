@@ -1,0 +1,62 @@
+import React, { useState } from 'react';
+import { auth } from '../../firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+
+function Login() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      if (rememberMe) {
+        localStorage.setItem('rememberMe', email);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  return (
+    <div className="login-container">
+      <h2>Beyaz Hacker Platformu</h2>
+      <form onSubmit={handleLogin}>
+        <input
+          type="email"
+          placeholder="E-posta"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <div className="password-field">
+          <input
+            type={showPassword ? "text" : "password"}
+            placeholder="Şifre"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+          >
+            {showPassword ? "Gizle" : "Göster"}
+          </button>
+        </div>
+        <div className="remember-me">
+          <input
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+          />
+          <label>Beni Hatırla</label>
+        </div>
+        <button type="submit">Giriş Yap</button>
+        <a href="/forgot-password">Şifremi Unuttum</a>
+      </form>
+    </div>
+  );
+}
+
+export default Login;

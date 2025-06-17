@@ -1,0 +1,45 @@
+beyaz-hacker-platform/
+├── frontend/
+│   ├── public/
+│   │   ├── index.html
+│   │   ├── favicon.ico
+│   │   └── assets/
+│   └── src/
+│       ├── components/
+│       │   ├── Auth/
+│       │   │   ├── Login.js
+│       │   │   ├── Register.js 
+│       │   │   └── ForgotPassword.js
+│       │   ├── Dashboard/
+│       │   │   ├── Profile.js
+│       │   │   ├── Terminal.js
+│       │   │   └── News.js
+│       │   ├── Social/
+│       │   │   ├── GlobalChat.js
+│       │   │   ├── Friends.js
+│       │   │   └── Groups.js
+│       │   └── Content/
+│       │       ├── Articles.js
+│       │       ├── Videos.js
+│       │       └── Tutorials.js
+│       ├── utils/
+│       │   ├── firebase.js
+│       │   └── validators.js
+│       ├── App.js
+│       └── index.js
+└── backend/
+    ├── config/
+    │   └── firebase.js
+    ├── controllers/
+    │   ├── authController.js
+    │   ├── userController.js
+    │   └── contentController.js
+    ├── models/
+    │   ├── User.js
+    │   ├── Content.js
+    │   └── Group.js
+    ├── routes/
+    │   ├── auth.js
+    │   ├── users.js
+    │   └── content.js
+    └── server.js
