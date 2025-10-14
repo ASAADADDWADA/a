@@ -6,11 +6,13 @@ const metrics = {
   sale: 0,
   warnings: 0,
   files: 0,
-  lastSkuCount: 0
+  lastSkuCount: 0,
+  netChange: 0
 };
 
 let inventoryFilter = '';
 let catalogFilter = '';
+let selectedProductCode = null;
 
 const summaryLog = document.getElementById('summaryLog');
 const inventoryTableBody = document.querySelector('#inventoryTable tbody');
@@ -20,6 +22,51 @@ const downloadTemplateButton = document.getElementById('downloadTemplate');
 const lastSyncLabel = document.getElementById('lastSync');
 const inventorySearchInput = document.getElementById('inventorySearch');
 const catalogSearchInput = document.getElementById('catalogSearch');
+const coverageBadge = document.getElementById('coverageBadge');
+const coverageValueLabel = document.getElementById('coverageValue');
+const netChangeBadge = document.getElementById('netChangeBadge');
+const netChangeValueLabel = document.getElementById('netChangeValue');
+const operationInboundRows = document.getElementById('operationInboundRows');
+const operationTransferRows = document.getElementById('operationTransferRows');
+const operationSaleRows = document.getElementById('operationSaleRows');
+const operationFiles = document.getElementById('operationFiles');
+const operationWarnings = document.getElementById('operationWarnings');
+const operationVolume = document.getElementById('operationVolume');
+const alertCenterList = document.getElementById('alertCenter');
+const criticalListElement = document.getElementById('criticalList');
+const categoryBreakdownContainer = document.getElementById('categoryBreakdown');
+const nextActionsList = document.getElementById('nextActions');
+const productDetail = document.getElementById('productDetail');
+const detailName = document.getElementById('detailName');
+const detailCode = document.getElementById('detailCode');
+const detailQuantity = document.getElementById('detailQuantity');
+const detailUnit = document.getElementById('detailUnit');
+const detailMinStock = document.getElementById('detailMinStock');
+const detailStatus = document.getElementById('detailStatus');
+const detailCategory = document.getElementById('detailCategory');
+const detailLocation = document.getElementById('detailLocation');
+const detailUpdatedAt = document.getElementById('detailUpdatedAt');
+const detailDescription = document.getElementById('detailDescription');
+
+const HEALTH_KEY_SUFFIX = {
+  ok: 'Ok',
+  low: 'Low',
+  critical: 'Critical',
+  out: 'Out',
+  tracking: 'Tracking'
+};
+
+const healthElements = Object.fromEntries(
+  Object.entries(HEALTH_KEY_SUFFIX).map(([key, suffix]) => [
+    key,
+    {
+      value: document.getElementById(`health${suffix}Value`),
+      percent: document.getElementById(`health${suffix}Percent`),
+      progress: document.getElementById(`health${suffix}Progress`),
+      bar: document.getElementById(`health${suffix}Bar`)
+    }
+  ])
+);
 
 const ACTION_LABELS = {
   inbound: 'Depodan Gelen Mal Girişi',
@@ -34,12 +81,24 @@ const ACTION_SIGN = {
   sale: -1
 };
 
+const STATUS_TO_KEY = {
+  Güvende: 'ok',
+  Düşük: 'low',
+  Kritik: 'critical',
+  Tükendi: 'out',
+  Takipte: 'tracking'
+};
+
 function slugify(value = '') {
   return String(value)
     .toLowerCase()
     .replace(/[^a-z0-9ğüşöçıİ\s]/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function escapeSelector(value = '') {
+  return String(value).replace(/([\0-\x1f\x7f"'\\:;<=>?@\[\]^`{|}~#$.%&*,+()])/g, '\\$1');
 }
 
 function findValue(row, candidates) {
@@ -66,6 +125,12 @@ function formatQuantity(value) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2
   }).format(value);
+}
+
+const integerFormatter = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
+
+function formatInteger(value) {
+  return integerFormatter.format(value);
 }
 
 function formatDate(value) {
@@ -118,6 +183,320 @@ function matchesFilter(entry, filter) {
     entry.description
   ].filter(Boolean).join(' '));
   return haystack.includes(filter);
+}
+
+function computeHealthStats(entries) {
+  const stats = {
+    total: entries.length,
+    ok: 0,
+    low: 0,
+    critical: 0,
+    out: 0,
+    tracking: 0,
+    totalQuantity: 0,
+    totalMinStock: 0,
+    minDefinedCount: 0
+  };
+
+  entries.forEach((entry) => {
+    const quantity = Number(entry.quantity || 0);
+    const minStock = Number(entry.minStock ?? NaN);
+    stats.totalQuantity += quantity;
+    if (Number.isFinite(minStock) && minStock > 0) {
+      stats.totalMinStock += minStock;
+      stats.minDefinedCount += 1;
+    }
+
+    const statusKey = STATUS_TO_KEY[getStatus(entry).label] || 'tracking';
+    stats[statusKey] += 1;
+  });
+
+  return stats;
+}
+
+function updateHealthIndicators(stats) {
+  const total = Math.max(stats.total, 1);
+
+  Object.entries(healthElements).forEach(([key, refs]) => {
+    if (!refs) return;
+    const count = stats[key] || 0;
+    const percent = Math.round((count / total) * 100);
+    if (refs.value) refs.value.textContent = formatInteger(count);
+    if (refs.percent) refs.percent.textContent = `${percent}%`;
+    if (refs.bar) refs.bar.style.width = `${percent}%`;
+    if (refs.progress) {
+      refs.progress.setAttribute('aria-valuenow', String(percent));
+      refs.progress.setAttribute('aria-valuetext', `${percent}%`);
+    }
+  });
+}
+
+function updateCoverageIndicator(stats) {
+  if (!coverageValueLabel || !coverageBadge) return;
+
+  if (stats.total === 0) {
+    coverageValueLabel.textContent = '-';
+    coverageBadge.removeAttribute('data-level');
+    return;
+  }
+
+  if (stats.totalMinStock > 0) {
+    const ratio = stats.totalQuantity / stats.totalMinStock;
+    coverageValueLabel.textContent = `${ratio.toFixed(1)} kat`;
+    if (ratio >= 1.5) {
+      delete coverageBadge.dataset.level;
+    } else if (ratio >= 1) {
+      coverageBadge.dataset.level = 'medium';
+    } else {
+      coverageBadge.dataset.level = 'low';
+    }
+  } else {
+    coverageValueLabel.textContent = 'Veri yok';
+    coverageBadge.dataset.level = 'medium';
+  }
+}
+
+function renderCriticalProducts(entries, stats) {
+  if (!criticalListElement) return;
+  criticalListElement.innerHTML = '';
+
+  const prioritized = entries
+    .filter((entry) => Number.isFinite(entry.minStock) && entry.minStock > 0)
+    .map((entry) => ({
+      entry,
+      ratio: entry.minStock > 0 ? (Number(entry.quantity || 0) / entry.minStock) : Infinity
+    }))
+    .filter((item) => item.ratio <= 1.5)
+    .sort((a, b) => a.ratio - b.ratio)
+    .slice(0, 5);
+
+  if (!prioritized.length) {
+    const li = document.createElement('li');
+    li.className = 'placeholder';
+    li.textContent = stats.total ? 'Kritik stok bulunmuyor.' : 'Analiz için stok verisi yükleyin.';
+    criticalListElement.appendChild(li);
+    return;
+  }
+
+  prioritized.forEach(({ entry, ratio }) => {
+    const li = document.createElement('li');
+    const percent = Math.max(0, Math.round(ratio * 100));
+    li.innerHTML = `
+      <strong>${entry.name || entry.code}</strong>
+      <span>${entry.code} · ${(entry.category || 'Kategori Yok')}</span>
+      <small>Kalan ${formatQuantity(Number(entry.quantity || 0))} / Min ${formatQuantity(Number(entry.minStock || 0))} (<span class="ratio">${percent}%</span>)</small>
+    `;
+    criticalListElement.appendChild(li);
+  });
+}
+
+function renderCategoryBreakdown(entries, stats) {
+  if (!categoryBreakdownContainer) return;
+  categoryBreakdownContainer.innerHTML = '';
+
+  if (!entries.length) {
+    const placeholder = document.createElement('div');
+    placeholder.className = 'placeholder';
+    placeholder.textContent = 'Kategori bazlı veri henüz oluşmadı.';
+    categoryBreakdownContainer.appendChild(placeholder);
+    return;
+  }
+
+  const totals = new Map();
+  entries.forEach((entry) => {
+    const key = entry.category || 'Kategori Yok';
+    const quantity = Number(entry.quantity || 0);
+    const existing = totals.get(key) || { quantity: 0, count: 0 };
+    existing.quantity += quantity;
+    existing.count += 1;
+    totals.set(key, existing);
+  });
+
+  const sorted = Array.from(totals.entries())
+    .sort((a, b) => b[1].quantity - a[1].quantity)
+    .slice(0, 6);
+
+  const denominator = stats.totalQuantity || sorted.reduce((sum, [, info]) => sum + info.quantity, 0) || 1;
+
+  sorted.forEach(([category, info]) => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'category-breakdown__item';
+    const percent = Math.round((info.quantity / denominator) * 100);
+    wrapper.innerHTML = `
+      <div class="category-breakdown__label">
+        <span>${category} (${info.count})</span>
+        <strong>${formatQuantity(info.quantity)}</strong>
+      </div>
+      <div class="category-breakdown__bar"><span style="width: ${percent}%"></span></div>
+    `;
+    categoryBreakdownContainer.appendChild(wrapper);
+  });
+}
+
+function updateAlertCenter(entries) {
+  if (!alertCenterList) return;
+  alertCenterList.innerHTML = '';
+
+  if (!entries.length) {
+    const li = document.createElement('li');
+    li.className = 'placeholder';
+    li.textContent = 'Analiz için yeterli veri bekleniyor.';
+    alertCenterList.appendChild(li);
+    return;
+  }
+
+  const alerts = [];
+  entries.forEach((entry) => {
+    const quantity = Number(entry.quantity || 0);
+    const minStock = Number(entry.minStock ?? NaN);
+    if (quantity <= 0) {
+      alerts.push({
+        severity: 'critical',
+        title: `${entry.name || entry.code} stoğu tükendi`,
+        detail: `${entry.code} için acil tedarik planı oluşturun.`
+      });
+    } else if (Number.isFinite(minStock) && quantity <= minStock) {
+      alerts.push({
+        severity: 'critical',
+        title: `${entry.name || entry.code} kritik seviyede`,
+        detail: `${formatQuantity(quantity)} adet kaldı. Minimum stok: ${formatQuantity(minStock)}.`
+      });
+    } else if (Number.isFinite(minStock) && quantity <= minStock * 1.2) {
+      alerts.push({
+        severity: 'low',
+        title: `${entry.name || entry.code} düşük stok`,
+        detail: `Rezerve stok ${formatQuantity(minStock)}. Planlanan sevkiyatları kontrol edin.`
+      });
+    }
+  });
+
+  const severityOrder = { critical: 0, low: 1 };
+  alerts
+    .sort((a, b) => (severityOrder[a.severity] ?? 99) - (severityOrder[b.severity] ?? 99))
+    .slice(0, 4)
+    .forEach((alert) => {
+      const li = document.createElement('li');
+      li.dataset.severity = alert.severity;
+      li.innerHTML = `<strong>${alert.title}</strong><span>${alert.detail}</span>`;
+      alertCenterList.appendChild(li);
+    });
+
+  if (!alertCenterList.children.length) {
+    const li = document.createElement('li');
+    li.className = 'placeholder';
+    li.textContent = 'Riskli stok bulunmuyor.';
+    alertCenterList.appendChild(li);
+  }
+}
+
+function updateActionPlan(stats) {
+  if (!nextActionsList) return;
+  nextActionsList.innerHTML = '';
+
+  const suggestions = [];
+
+  if (stats.out > 0 || stats.critical > 0) {
+    suggestions.push(`Kritik durumda ${formatInteger(stats.out + stats.critical)} ürün var. Satın alma ve tedarik planı oluşturun.`);
+  }
+
+  if (metrics.warnings > 0) {
+    suggestions.push(`${formatInteger(metrics.warnings)} satır uyarı verdi. Excel şablonunu gözden geçirip temizleyin.`);
+  }
+
+  if (metrics.transfer + metrics.sale > metrics.inbound) {
+    suggestions.push('Çıkış hareketleri girişleri geçti. Depolar arası stok dengelemesi yapın.');
+  } else {
+    suggestions.push('Depo sayımı planlayarak stok doğruluğunu teyit edin.');
+  }
+
+  if (stats.low === 0 && stats.critical === 0 && stats.out === 0) {
+    suggestions.unshift('Stok sağlığı dengede. Kampanya veya üretim planlarını güncelleyin.');
+  }
+
+  suggestions.slice(0, 3).forEach((text) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="action-plan__text">${text}</span>`;
+    nextActionsList.appendChild(li);
+  });
+
+  if (!nextActionsList.children.length) {
+    const li = document.createElement('li');
+    li.className = 'placeholder';
+    li.textContent = 'Veriler analiz ediliyor.';
+    nextActionsList.appendChild(li);
+  }
+}
+
+function updateInsightPanels() {
+  const entries = Array.from(stockMap.values());
+  const stats = computeHealthStats(entries);
+  updateHealthIndicators(stats);
+  updateCoverageIndicator(stats);
+  renderCriticalProducts(entries, stats);
+  renderCategoryBreakdown(entries, stats);
+  updateAlertCenter(entries);
+  updateActionPlan(stats);
+}
+
+function highlightSelectedRow(code) {
+  inventoryTableBody.querySelectorAll('tr').forEach((row) => row.classList.remove('is-selected'));
+  if (!code) return;
+  const selector = `tr[data-code="${escapeSelector(code)}"]`;
+  const activeRow = inventoryTableBody.querySelector(selector);
+  if (activeRow) {
+    activeRow.classList.add('is-selected');
+  }
+}
+
+function clearProductDetail() {
+  selectedProductCode = null;
+  if (!productDetail) return;
+  productDetail.classList.add('is-empty');
+  highlightSelectedRow(null);
+  if (detailName) detailName.textContent = '-';
+  if (detailCode) detailCode.textContent = '-';
+  if (detailQuantity) detailQuantity.textContent = '0';
+  if (detailUnit) detailUnit.textContent = '-';
+  if (detailMinStock) detailMinStock.textContent = '-';
+  if (detailStatus) {
+    detailStatus.textContent = '-';
+    detailStatus.className = 'status-badge';
+  }
+  if (detailCategory) detailCategory.textContent = '-';
+  if (detailLocation) detailLocation.textContent = '-';
+  if (detailUpdatedAt) detailUpdatedAt.textContent = '-';
+  if (detailDescription) detailDescription.textContent = '-';
+}
+
+function showProductDetail(entry) {
+  if (!entry) {
+    clearProductDetail();
+    return;
+  }
+
+  selectedProductCode = entry.code;
+  if (!productDetail) return;
+
+  productDetail.classList.remove('is-empty');
+  if (detailName) detailName.textContent = entry.name || 'Tanımsız Ürün';
+  if (detailCode) detailCode.textContent = entry.code;
+  if (detailQuantity) detailQuantity.textContent = formatQuantity(Number(entry.quantity || 0));
+  if (detailUnit) detailUnit.textContent = entry.unit || '-';
+  if (detailMinStock) {
+    detailMinStock.textContent = Number.isFinite(entry.minStock) ? formatQuantity(Number(entry.minStock)) : '-';
+  }
+  if (detailCategory) detailCategory.textContent = entry.category || '-';
+  if (detailLocation) detailLocation.textContent = entry.location || 'Belirtilmedi';
+  if (detailUpdatedAt) detailUpdatedAt.textContent = formatDate(entry.updatedAt);
+  if (detailDescription) detailDescription.textContent = entry.description || 'Açıklama girilmemiş.';
+
+  const status = getStatus(entry);
+  if (detailStatus) {
+    detailStatus.className = status.className;
+    detailStatus.textContent = status.label;
+  }
+
+  highlightSelectedRow(entry.code);
 }
 
 function processWorkbook(action, file) {
@@ -265,12 +644,16 @@ function renderInventory() {
       : 'Henüz stok verisi bulunmuyor. Excel yükleyerek başlayın.';
     row.appendChild(cell);
     inventoryTableBody.appendChild(row);
+    clearProductDetail();
     return;
   }
+
+  let hasSelection = false;
 
   entries.forEach((entry) => {
     const status = getStatus(entry);
     const row = document.createElement('tr');
+    row.dataset.code = entry.code;
     row.innerHTML = `
       <td>${entry.code}</td>
       <td>${entry.name || ''}</td>
@@ -282,8 +665,24 @@ function renderInventory() {
       <td><span class="${status.className}">${status.label}</span></td>
       <td>${formatDate(entry.updatedAt)}</td>
     `;
+    row.addEventListener('click', () => {
+      showProductDetail(entry);
+    });
+    if (entry.code === selectedProductCode) {
+      row.classList.add('is-selected');
+      hasSelection = true;
+    }
     inventoryTableBody.appendChild(row);
   });
+
+  if (hasSelection) {
+    const current = entries.find((item) => item.code === selectedProductCode);
+    if (current) {
+      showProductDetail(current);
+    }
+  } else if (entries.length) {
+    showProductDetail(entries[0]);
+  }
 }
 
 function renderCatalog() {
@@ -357,25 +756,48 @@ function updateMetrics(details) {
     if (metrics[details.action] !== undefined) {
       metrics[details.action] += details.affected;
     }
+    metrics.netChange += details.totalQuantityChange;
   }
 
   const totalQuantity = Array.from(stockMap.values()).reduce((sum, entry) => sum + Number(entry.quantity || 0), 0);
 
-  const formatNumber = (value) => new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 }).format(value);
-
-  document.getElementById('metricSkus').textContent = formatNumber(skuCount);
+  document.getElementById('metricSkus').textContent = formatInteger(skuCount);
   const delta = skuCount - prevSkuCount;
   const deltaLabel = delta === 0 ? 'Değişim yok' : `${delta > 0 ? '+' : ''}${delta} ürün`;
   document.getElementById('metricSkusDelta').textContent = deltaLabel;
   document.getElementById('metricQuantity').textContent = formatQuantity(totalQuantity);
-  document.getElementById('metricInbound').textContent = formatNumber(metrics.inbound);
-  document.getElementById('metricTransfer').textContent = formatNumber(metrics.transfer);
-  document.getElementById('metricSale').textContent = formatNumber(metrics.sale);
-  document.getElementById('metricWarnings').textContent = formatNumber(metrics.warnings);
+  document.getElementById('metricInbound').textContent = formatInteger(metrics.inbound);
+  document.getElementById('metricTransfer').textContent = formatInteger(metrics.transfer);
+  document.getElementById('metricSale').textContent = formatInteger(metrics.sale);
+  document.getElementById('metricWarnings').textContent = formatInteger(metrics.warnings);
+
+  if (operationInboundRows) operationInboundRows.textContent = formatInteger(metrics.inbound);
+  if (operationTransferRows) operationTransferRows.textContent = formatInteger(metrics.transfer);
+  if (operationSaleRows) operationSaleRows.textContent = formatInteger(metrics.sale);
+  if (operationFiles) operationFiles.textContent = formatInteger(metrics.files);
+  if (operationWarnings) operationWarnings.textContent = formatInteger(metrics.warnings);
+  if (operationVolume) operationVolume.textContent = formatQuantity(totalQuantity);
+
+  if (netChangeValueLabel) {
+    const net = metrics.netChange;
+    const label = `${net >= 0 ? '+' : ''}${formatQuantity(net)}`;
+    netChangeValueLabel.textContent = label;
+    if (netChangeBadge) {
+      if (net > 0) {
+        netChangeBadge.dataset.trend = 'positive';
+      } else if (net < 0) {
+        netChangeBadge.dataset.trend = 'negative';
+      } else {
+        delete netChangeBadge.dataset.trend;
+      }
+    }
+  }
 
   if (details) {
     lastSyncLabel.textContent = formatDate(new Date());
   }
+
+  updateInsightPanels();
 }
 
 function exportInventory() {

@@ -6,6 +6,8 @@ Bu depo, Excel dosyalarını kullanarak stok yönetimi yapabileceğiniz profesyo
 - Transfer ve satış işlemlerinde stoktan düşüm yapar,
 - Güncel stok durumu, kritik seviyeler ve katalog bilgilerini ayrı panellerde sunar,
 - Anlık metrik kartlarıyla toplam SKU, stok miktarı ve işlem adetlerini takip eder,
+- Stok sağlığı dağılımı, aksiyon merkezi ve kategori bazlı grafiklerle profesyonel analiz sunar,
+- Seçilen ürün için detay kartında stok durumu, lokasyon ve açıklamaları anlık gösterir,
 - İstendiğinde stok listesini tekrar Excel olarak indirmenize imkân tanır.
 
 ## Nasıl Çalışır?
@@ -19,6 +21,14 @@ Bu depo, Excel dosyalarını kullanarak stok yönetimi yapabileceğiniz profesyo
 7. **Ürün Kataloğu** panelinden stokta olan veya Excel ile eklenmiş tüm ürün tanımlarını filtreleyebilirsiniz.
 
 > **İpucu:** Dosyada aynı stok kodundan birden fazla satır varsa hepsi üst üste eklenir. Kodu boş olan satırlar otomatik olarak atlanır.
+
+## Profesyonel Panel Özellikleri
+
+- **Stok Sağlığı ve Analitik:** Kritik/düşük stokları, kategori bazlı dağılımı ve stok kaplama oranını tek bölümde takip edebilirsiniz. Panel, stok miktarındaki artış/azalışı “Net Değişim” rozetinde gösterir.
+- **Aksiyon Merkezi:** Sistem, tükendi/kritik ürünleri otomatik listeleyerek hangi stoklar için acil işlem gerektiğini vurgular. Aynı alanda önerilen aksiyonlar da paylaşılır.
+- **Operasyon Akışı:** İşlenen Excel dosyası adedi, toplam uyarı sayısı ve operasyon bazlı satır adetleri (giriş/transfer/satış) sürekli güncellenir.
+- **Ürün Detay Kartı:** Stok tablosundan satır seçtiğinizde sağ panelde ürün adı, miktar, minimum stok, lokasyon, açıklama ve durum etiketi profesyonel bir kart görünümünde sunulur.
+- **İşlem Günlüğü:** Her yükleme sonrası hazırlanan detaylı özetler zaman çizgisi görseliyle listelenir; kritik satırlar ve uyarılar bu alandan izlenebilir.
 
 ## Excel Şablonu
 
@@ -39,6 +49,7 @@ Excel dosyanızda en azından aşağıdaki başlıklardan bir kombinasyonu bulun
 - Dashboard’daki metrikler (Toplam SKU, stok miktarı, işlem adetleri ve uyarılar) her yükleme sonrası otomatik güncellenir.
 - Tablo verileri tarayıcı belleğinde tutulur. Sayfayı yenilerseniz sıfırlanır; düzenli dışa aktarmayı unutmayın.
 - **Excel Şablonu** butonu üzerinden örnek bir çalışma dosyası indirebilirsiniz.
+- Stok tablosunda satır seçtiğinizde sağdaki “Ürün Detayı” kartı güncellenir; mobil görünümde kart tablo altına taşınır.
 
 ## Başlangıç
 

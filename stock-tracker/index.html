@@ -11,8 +11,9 @@
   <body>
     <header class="topbar">
       <div class="topbar__brand">
+        <span class="topbar__badge">Kurumsal Stok Yönetimi</span>
         <h1>Depo Stok Kontrol Merkezi</h1>
-        <p>Excel ile toplu hareketleri yönetirken ürün kataloğu ve stok sağlığını izleyin.</p>
+        <p>Excel yüklemeleri ile tüm stok hareketlerini tek panelden yönetin, riskleri ve aksiyonları anlık takip edin.</p>
       </div>
       <div class="topbar__actions">
         <div class="topbar__status">
@@ -28,7 +29,7 @@
         <header class="panel__header">
           <div>
             <h2>Depo Genel Bakış</h2>
-            <p>Alım, transfer ve satış hareketlerinizi anlık olarak takip edin.</p>
+            <p>Alım, transfer ve satış operasyonlarının stoklarınıza etkisini gerçek zamanlı izleyin.</p>
           </div>
           <div class="panel__quick-actions">
             <button id="downloadTemplate" class="button button--ghost">Excel Şablonu</button>
@@ -72,7 +73,7 @@
         <header class="panel__header">
           <div>
             <h2>Excel İşlemleri</h2>
-            <p>İlgili operasyon için Excel dosyanızı yükleyin, sistem stokları otomatik güncellesin.</p>
+            <p>İlgili operasyon için Excel dosyanızı yükleyin, sistem stokları otomatik analiz edip güncellesin.</p>
           </div>
         </header>
         <div class="actions-grid">
@@ -115,37 +116,202 @@
         </div>
       </section>
 
+      <section class="panel panel--analytics">
+        <header class="panel__header">
+          <div>
+            <h2>Stok Sağlığı ve Analitik</h2>
+            <p>Kritik stokları, kategori bazlı dağılımı ve operasyon yoğunluğunu tek bakışta takip edin.</p>
+          </div>
+          <div class="panel__tools">
+            <span id="coverageBadge" class="badge badge--surface">Stok Kaplama <strong id="coverageValue">-</strong></span>
+            <span id="netChangeBadge" class="badge badge--neutral">Net Değişim <strong id="netChangeValue">0</strong></span>
+          </div>
+        </header>
+        <div class="insight-grid">
+          <article class="insight-card insight-card--wide">
+            <header class="insight-card__header">
+              <div>
+                <h3>Stok Sağlığı Dağılımı</h3>
+                <p>Minimum stok tanımlı ürünlerin risk seviyelerini izleyin.</p>
+              </div>
+            </header>
+            <ul class="health-list">
+              <li>
+                <div class="health-list__label"><span class="dot dot--ok"></span><span>Güvende</span></div>
+                <div id="healthOkProgress" class="health-list__progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <span id="healthOkBar" class="health-list__bar"></span>
+                </div>
+                <span id="healthOkPercent" class="health-list__percent">0%</span>
+                <strong id="healthOkValue">0</strong>
+              </li>
+              <li>
+                <div class="health-list__label"><span class="dot dot--low"></span><span>Düşük</span></div>
+                <div id="healthLowProgress" class="health-list__progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <span id="healthLowBar" class="health-list__bar"></span>
+                </div>
+                <span id="healthLowPercent" class="health-list__percent">0%</span>
+                <strong id="healthLowValue">0</strong>
+              </li>
+              <li>
+                <div class="health-list__label"><span class="dot dot--critical"></span><span>Kritik</span></div>
+                <div id="healthCriticalProgress" class="health-list__progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <span id="healthCriticalBar" class="health-list__bar"></span>
+                </div>
+                <span id="healthCriticalPercent" class="health-list__percent">0%</span>
+                <strong id="healthCriticalValue">0</strong>
+              </li>
+              <li>
+                <div class="health-list__label"><span class="dot dot--empty"></span><span>Tükendi</span></div>
+                <div id="healthOutProgress" class="health-list__progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <span id="healthOutBar" class="health-list__bar"></span>
+                </div>
+                <span id="healthOutPercent" class="health-list__percent">0%</span>
+                <strong id="healthOutValue">0</strong>
+              </li>
+              <li>
+                <div class="health-list__label"><span class="dot dot--tracking"></span><span>Takipte</span></div>
+                <div id="healthTrackingProgress" class="health-list__progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <span id="healthTrackingBar" class="health-list__bar"></span>
+                </div>
+                <span id="healthTrackingPercent" class="health-list__percent">0%</span>
+                <strong id="healthTrackingValue">0</strong>
+              </li>
+            </ul>
+            <div class="insight-card__divider"></div>
+            <div>
+              <h4>Aksiyon Merkezi</h4>
+              <ul id="alertCenter" class="alert-center">
+                <li class="placeholder">Analiz için yeterli veri bekleniyor.</li>
+              </ul>
+            </div>
+          </article>
+          <article class="insight-card">
+            <header class="insight-card__header">
+              <div>
+                <h3>Kritik Ürün Listesi</h3>
+                <p>Stok seviyesine göre önceliklendirilen ürünler.</p>
+              </div>
+            </header>
+            <ol id="criticalList" class="critical-list">
+              <li class="placeholder">Kritik stok bulunmuyor.</li>
+            </ol>
+          </article>
+          <article class="insight-card">
+            <header class="insight-card__header">
+              <div>
+                <h3>Kategori Dağılımı</h3>
+                <p>Stok adedi ve miktarını kategori bazında izleyin.</p>
+              </div>
+            </header>
+            <div id="categoryBreakdown" class="category-breakdown">
+              <div class="placeholder">Kategori bazlı veri henüz oluşmadı.</div>
+            </div>
+          </article>
+          <article class="insight-card">
+            <header class="insight-card__header">
+              <div>
+                <h3>Operasyon Akışı</h3>
+                <p>İşlenen dosya adetleri ve önerilen sonraki adımlar.</p>
+              </div>
+            </header>
+            <ul class="operation-list">
+              <li><span>Gelen</span><strong id="operationInboundRows">0</strong></li>
+              <li><span>Transfer</span><strong id="operationTransferRows">0</strong></li>
+              <li><span>Satış</span><strong id="operationSaleRows">0</strong></li>
+              <li><span>İşlenen Dosya</span><strong id="operationFiles">0</strong></li>
+              <li><span>Uyarı</span><strong id="operationWarnings">0</strong></li>
+              <li><span>Toplam Stok</span><strong id="operationVolume">0</strong></li>
+            </ul>
+            <div class="insight-card__divider"></div>
+            <div>
+              <h4>Önerilen Aksiyonlar</h4>
+              <ul id="nextActions" class="action-plan">
+                <li class="placeholder">Veriler analiz ediliyor.</li>
+              </ul>
+            </div>
+          </article>
+        </div>
+      </section>
+
       <section class="panel panel--inventory">
         <header class="panel__header">
           <div>
             <h2>Güncel Stok Durumu</h2>
-            <p>Kritik seviyeleri ve stok sağlığını inceleyin.</p>
+            <p>Kritik seviyeleri, raf lokasyonlarını ve stok sağlığını inceleyin.</p>
           </div>
           <div class="panel__tools">
             <input id="inventorySearch" type="search" placeholder="Stok kodu, ürün adı veya kategori ara" />
           </div>
         </header>
-        <div class="inventory__table-wrapper">
-          <table id="inventoryTable" class="table">
-            <thead>
-              <tr>
-                <th>Stok Kodu</th>
-                <th>Ürün Adı</th>
-                <th>Kategori</th>
-                <th>Lokasyon</th>
-                <th>Birim</th>
-                <th>Miktar</th>
-                <th>Min. Stok</th>
-                <th>Durum</th>
-                <th>Son Güncelleme</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr class="placeholder">
-                <td colspan="9">Henüz stok verisi bulunmuyor. Excel yükleyerek başlayın.</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="inventory__layout">
+          <div class="inventory__table-wrapper">
+            <table id="inventoryTable" class="table">
+              <thead>
+                <tr>
+                  <th>Stok Kodu</th>
+                  <th>Ürün Adı</th>
+                  <th>Kategori</th>
+                  <th>Lokasyon</th>
+                  <th>Birim</th>
+                  <th>Miktar</th>
+                  <th>Min. Stok</th>
+                  <th>Durum</th>
+                  <th>Son Güncelleme</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="placeholder">
+                  <td colspan="9">Henüz stok verisi bulunmuyor. Excel yükleyerek başlayın.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <aside id="productDetail" class="inventory__detail is-empty">
+            <div class="inventory__detail-empty">
+              <h3>Ürün Detayı</h3>
+              <p>Tablodan bir ürün seçtiğinizde stok geçmişi ve özellikleri burada görüntülenir.</p>
+            </div>
+            <div class="inventory__detail-body">
+              <header class="inventory-detail__header">
+                <small>Seçilen Ürün</small>
+                <h3 id="detailName">-</h3>
+                <span id="detailCode" class="badge badge--primary">-</span>
+              </header>
+              <div class="inventory-detail__summary">
+                <div>
+                  <span>Güncel Stok</span>
+                  <strong id="detailQuantity">0</strong>
+                  <small id="detailUnit">-</small>
+                </div>
+                <div>
+                  <span>Minimum</span>
+                  <strong id="detailMinStock">-</strong>
+                </div>
+                <div>
+                  <span>Durum</span>
+                  <span id="detailStatus" class="status-badge">-</span>
+                </div>
+              </div>
+              <dl class="inventory-detail__meta">
+                <div>
+                  <dt>Kategori</dt>
+                  <dd id="detailCategory">-</dd>
+                </div>
+                <div>
+                  <dt>Lokasyon</dt>
+                  <dd id="detailLocation">-</dd>
+                </div>
+                <div>
+                  <dt>Son Güncelleme</dt>
+                  <dd id="detailUpdatedAt">-</dd>
+                </div>
+              </dl>
+              <div class="inventory-detail__notes">
+                <h4>Açıklama</h4>
+                <p id="detailDescription">-</p>
+              </div>
+            </div>
+          </aside>
         </div>
       </section>
 
