@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SKT Takip Sistemi</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand">
+        <h1>SKT Takip Sistemi</h1>
+        <p class="header-tagline">Android ve PC için hızlı SKT ve stok yönetimi</p>
+      </div>
+      <div class="header-actions">
+        <div class="scan-controls hidden" id="scanControls">
+          <button id="cameraToggle" class="primary">Kameradan Barkod Tara</button>
+          <span id="scanStatus" class="status-text">Kamera kapalı</span>
+        </div>
+        <div class="user-menu hidden" id="userMenu">
+          <span id="userEmail" class="user-email"></span>
+          <button id="signOutButton" class="secondary">Çıkış Yap</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="auth-container" id="authContainer" aria-live="polite">
+      <div class="auth-card" role="dialog" aria-modal="true">
+        <h2 id="authTitle">Giriş Yap</h2>
+        <p id="authDescription" class="auth-description">
+          Kayıtlı ürün listenizi görüntülemek için hesabınıza giriş yapın.
+        </p>
+        <div id="authMessage" class="auth-message" role="status" aria-live="polite"></div>
+
+        <form id="loginForm" class="auth-form" novalidate>
+          <label class="field">
+            <span>E-posta</span>
+            <input type="email" id="loginEmail" autocomplete="email" required />
+          </label>
+          <label class="field">
+            <span>Şifre</span>
+            <input type="password" id="loginPassword" autocomplete="current-password" required />
+          </label>
+          <button type="submit" class="primary full-width">Giriş Yap</button>
+        </form>
+
+        <form id="registerForm" class="auth-form hidden" novalidate>
+          <label class="field">
+            <span>E-posta</span>
+            <input type="email" id="registerEmail" autocomplete="email" required />
+          </label>
+          <label class="field">
+            <span>Şifre</span>
+            <input type="password" id="registerPassword" autocomplete="new-password" required />
+          </label>
+          <button type="submit" class="primary full-width">Kayıt Ol</button>
+        </form>
+
+        <form id="resetForm" class="auth-form hidden" novalidate>
+          <p class="auth-info">
+            Şifrenizi sıfırlamak için lütfen kayıtlı e-posta adresinizi girin. Size
+            yönlendirme bağlantısı gönderilecektir.
+          </p>
+          <label class="field">
+            <span>E-posta</span>
+            <input type="email" id="resetEmail" autocomplete="email" required />
+          </label>
+          <button type="submit" class="primary full-width">Şifre Yenileme Bağlantısı Gönder</button>
+        </form>
+
+        <div class="auth-links">
+          <button type="button" class="link" id="showRegister">Hesabınız yok mu? Kayıt olun</button>
+          <button type="button" class="link" id="showLogin">Giriş yap</button>
+          <button type="button" class="link" id="showReset">Şifremi unuttum</button>
+        </div>
+      </div>
+    </div>
+
+    <main class="layout hidden" id="appLayout">
+      <section class="panel" aria-labelledby="scan-title">
+        <h2 id="scan-title">Barkod Tarama</h2>
+        <div id="scanner" class="scanner hidden" aria-hidden="true">
+          <video id="camera" autoplay muted playsinline></video>
+          <div class="scanner-overlay"></div>
+        </div>
+        <p class="help-text">
+          Kamera Code 128 barkodlarını otomatik algılar. Barkod tanınmazsa aşağıdaki
+          alanları manuel doldurabilirsiniz.
+        </p>
+      </section>
+
+      <section class="panel" aria-labelledby="form-title">
+        <h2 id="form-title">Ürün Bilgileri</h2>
+        <form id="productForm" class="form-grid">
+          <label class="field">
+            <span>Barkod</span>
+            <input type="text" id="barcode" name="barcode" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span>Ürün Adı</span>
+            <input type="text" id="productName" name="productName" autocomplete="off" required />
+          </label>
+          <label class="field">
+            <span>SKT (Son Kullanma Tarihi)</span>
+            <input type="date" id="expiryDate" name="expiryDate" required />
+          </label>
+          <label class="field">
+            <span>Kalan Gün</span>
+            <input type="text" id="daysRemaining" name="daysRemaining" readonly />
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="primary">Ürünü Ekle</button>
+            <button type="button" id="clearForm" class="secondary">Temizle</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel" aria-labelledby="list-title">
+        <div class="panel-header">
+          <h2 id="list-title">Takip Listesi</h2>
+          <button id="downloadExcel" class="secondary">Excel Olarak İndir</button>
+        </div>
+        <div class="table-wrapper">
+          <table id="productTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Barkod</th>
+                <th>Ürün Adı</th>
+                <th>SKT</th>
+                <th>Kalan Gün</th>
+                <th>Eklenme Tarihi</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <template id="rowTemplate">
+      <tr>
+        <td class="row-index"></td>
+        <td class="row-barcode"></td>
+        <td class="row-product"></td>
+        <td class="row-expiry"></td>
+        <td class="row-remaining"></td>
+        <td class="row-created"></td>
+      </tr>
+    </template>
+
+    <script src="https://unpkg.com/@ericblade/quagga2@2.0.0/dist/quagga.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha512-5KLeAmAiNBuvA3Ybg6N+5iUBwZOHHuRQ7v9sm3e+P91QdRxQzS5knjPPEtVYsOGJqFtLOJV08huH7wvveHrnYw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
