@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Depo Stok Kontrol Merkezi</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar__brand">
+        <h1>Depo Stok Kontrol Merkezi</h1>
+        <p>Excel ile toplu hareketleri yönetirken ürün kataloğu ve stok sağlığını izleyin.</p>
+      </div>
+      <div class="topbar__actions">
+        <div class="topbar__status">
+          <span class="topbar__status-label">Son Güncelleme</span>
+          <span id="lastSync" class="topbar__status-value">-</span>
+        </div>
+        <button id="exportButton" class="button button--primary">Güncel Stoku İndir</button>
+      </div>
+    </header>
+
+    <main class="shell">
+      <section class="panel panel--metrics">
+        <header class="panel__header">
+          <div>
+            <h2>Depo Genel Bakış</h2>
+            <p>Alım, transfer ve satış hareketlerinizi anlık olarak takip edin.</p>
+          </div>
+          <div class="panel__quick-actions">
+            <button id="downloadTemplate" class="button button--ghost">Excel Şablonu</button>
+          </div>
+        </header>
+        <div class="metric-grid">
+          <article class="metric-card">
+            <span class="metric-card__label">Toplam SKU</span>
+            <strong id="metricSkus" class="metric-card__value">0</strong>
+            <small id="metricSkusDelta" class="metric-card__delta">-</small>
+          </article>
+          <article class="metric-card">
+            <span class="metric-card__label">Stok Miktarı</span>
+            <strong id="metricQuantity" class="metric-card__value">0</strong>
+            <small class="metric-card__delta">adet</small>
+          </article>
+          <article class="metric-card metric-card--positive">
+            <span class="metric-card__label">Gelen Ürün</span>
+            <strong id="metricInbound" class="metric-card__value">0</strong>
+            <small class="metric-card__delta">satır işlendi</small>
+          </article>
+          <article class="metric-card metric-card--neutral">
+            <span class="metric-card__label">Transfer</span>
+            <strong id="metricTransfer" class="metric-card__value">0</strong>
+            <small class="metric-card__delta">satır işlendi</small>
+          </article>
+          <article class="metric-card metric-card--negative">
+            <span class="metric-card__label">Satış Çıkışı</span>
+            <strong id="metricSale" class="metric-card__value">0</strong>
+            <small class="metric-card__delta">satır işlendi</small>
+          </article>
+          <article class="metric-card">
+            <span class="metric-card__label">Uyarılar</span>
+            <strong id="metricWarnings" class="metric-card__value">0</strong>
+            <small class="metric-card__delta">adet</small>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel panel--operations">
+        <header class="panel__header">
+          <div>
+            <h2>Excel İşlemleri</h2>
+            <p>İlgili operasyon için Excel dosyanızı yükleyin, sistem stokları otomatik güncellesin.</p>
+          </div>
+        </header>
+        <div class="actions-grid">
+          <article class="action-card">
+            <h3>Depodan Gelen Mal Girişi</h3>
+            <p>Sevkiyat ile depoya giren ürünleri toplu olarak ekleyin.</p>
+            <label class="button button--secondary">
+              Excel Yükle
+              <input type="file" accept=".xlsx,.xls" data-action="inbound" />
+            </label>
+            <ul>
+              <li>Yeni ürünler otomatik olarak kataloğa eklenir.</li>
+              <li>Var olan ürünler için stok miktarı artırılır.</li>
+            </ul>
+          </article>
+          <article class="action-card">
+            <h3>Transfer / Mal Çıkışı</h3>
+            <p>Depolar arası transferleri ve çıkışları kayıt altına alın.</p>
+            <label class="button button--secondary">
+              Excel Yükle
+              <input type="file" accept=".xlsx,.xls" data-action="transfer" />
+            </label>
+            <ul>
+              <li>Stoktan düşülen ürünler hareket kaydına yansır.</li>
+              <li>Negatif stok oluşursa uyarı alınır.</li>
+            </ul>
+          </article>
+          <article class="action-card">
+            <h3>Anlık Satış Çıkışı</h3>
+            <p>Satış operasyonlarınızı sisteme işleyin, stoklarınız güncel kalsın.</p>
+            <label class="button button--secondary">
+              Excel Yükle
+              <input type="file" accept=".xlsx,.xls" data-action="sale" />
+            </label>
+            <ul>
+              <li>Satılan miktar kadar stok düşer.</li>
+              <li>Kritik stok sınırı altındaki ürünler işaretlenir.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel panel--inventory">
+        <header class="panel__header">
+          <div>
+            <h2>Güncel Stok Durumu</h2>
+            <p>Kritik seviyeleri ve stok sağlığını inceleyin.</p>
+          </div>
+          <div class="panel__tools">
+            <input id="inventorySearch" type="search" placeholder="Stok kodu, ürün adı veya kategori ara" />
+          </div>
+        </header>
+        <div class="inventory__table-wrapper">
+          <table id="inventoryTable" class="table">
+            <thead>
+              <tr>
+                <th>Stok Kodu</th>
+                <th>Ürün Adı</th>
+                <th>Kategori</th>
+                <th>Lokasyon</th>
+                <th>Birim</th>
+                <th>Miktar</th>
+                <th>Min. Stok</th>
+                <th>Durum</th>
+                <th>Son Güncelleme</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="placeholder">
+                <td colspan="9">Henüz stok verisi bulunmuyor. Excel yükleyerek başlayın.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel panel--catalog">
+        <header class="panel__header">
+          <div>
+            <h2>Ürün Kataloğu</h2>
+            <p>Depoda takip edilen tüm ürünlerin referans listesini görüntüleyin.</p>
+          </div>
+          <div class="panel__tools">
+            <input id="catalogSearch" type="search" placeholder="Ürün kataloğunda ara" />
+          </div>
+        </header>
+        <div class="inventory__table-wrapper">
+          <table id="catalogTable" class="table">
+            <thead>
+              <tr>
+                <th>Stok Kodu</th>
+                <th>Ürün Adı</th>
+                <th>Kategori</th>
+                <th>Birim</th>
+                <th>Min. Stok</th>
+                <th>Lokasyon</th>
+                <th>Açıklama</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="placeholder">
+                <td colspan="7">Henüz ürün tanımı bulunmuyor.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel panel--activity">
+        <header class="panel__header">
+          <div>
+            <h2>İşlem Günlüğü</h2>
+            <p>Excel yüklemeleri ve sistem uyarılarını kronolojik olarak takip edin.</p>
+          </div>
+        </header>
+        <div id="summaryLog" class="summary__log" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <small>
+        Excel dosyalarınızda <strong>Stok Kodu</strong>, <strong>Ürün Adı</strong>, <strong>Miktar</strong> ve isteğe bağlı olarak
+        <strong>Kategori</strong>, <strong>Birim</strong>, <strong>Raf/Lokasyon</strong>, <strong>Minimum Stok</strong> sütunlarını eklemeyi unutmayın.
+      </small>
+    </footer>
+  </body>
+</html>
