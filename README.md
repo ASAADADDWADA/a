@@ -17,7 +17,7 @@ Android ve PC cihazlarında çalışan bu web uygulamasıyla ürünlerin son kul
 3. "Firestore Database" bölümünden bir veritabanı başlatın (Production veya Test modu).
 4. Projenizin web uygulaması için Firebase yapılandırma bilgilerini alın.
 5. Depodaki `firebase-config.example.js` dosyasını `firebase-config.js` olarak kopyalayın.
-6. Yeni oluşturduğunuz `firebase-config.js` dosyasındaki `YOUR_...` alanlarını kendi Firebase web yapılandırma bilgilerinizle doldurun.
+6. Yeni oluşturduğunuz `firebase-config.js` dosyasındaki `YOUR_...` alanlarını kendi Firebase web yapılandırma bilgilerinizle doldurun. Firebase konsolunun verdiği `const firebaseConfig = { ... }` bloklarını doğrudan bu dosyaya yapıştırabilir veya `window.firebaseConfig = { ... }` şeklinde ayarlayabilirsiniz; uygulama her iki formu da otomatik algılar.
 7. Gerekirse Firestore güvenlik kurallarınızı, yalnızca oturum açmış kullanıcının kendi koleksiyonuna erişmesine izin verecek şekilde güncelleyin.
 
 ## Çalıştırma

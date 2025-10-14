@@ -31,7 +31,16 @@ const showRegisterButton = document.getElementById('showRegister');
 const showLoginButton = document.getElementById('showLogin');
 const showResetButton = document.getElementById('showReset');
 
-const firebaseConfig = window.firebaseConfig || {};
+const firebaseConfigSource =
+  (typeof window !== 'undefined' && window.firebaseConfig) ||
+  (typeof firebaseConfig !== 'undefined' && firebaseConfig) ||
+  (typeof globalThis !== 'undefined' && globalThis.firebaseConfig) ||
+  null;
+
+const activeFirebaseConfig =
+  firebaseConfigSource && typeof firebaseConfigSource === 'object'
+    ? firebaseConfigSource
+    : {};
 const requiredFirebaseKeys = [
   'apiKey',
   'authDomain',
@@ -42,7 +51,7 @@ const requiredFirebaseKeys = [
 ];
 
 const isFirebaseConfigured = requiredFirebaseKeys.every((key) => {
-  const value = firebaseConfig[key];
+  const value = activeFirebaseConfig[key];
   return typeof value === 'string' && value.trim() && !value.startsWith('YOUR_');
 });
 
@@ -62,7 +71,7 @@ const authDescriptions = {
 };
 
 const configWarning =
-  'Lütfen firebase-config.js dosyanızda Firebase yapılandırmasını doldurun.';
+  'Lütfen firebase-config.js dosyanızda veya global firebaseConfig değişkeninde Firebase yapılandırmasını doldurun.';
 
 const productCatalog = {
   '8690504000012': 'Örnek Çikolata 80g',
@@ -84,7 +93,7 @@ if (!isFirebaseConfigured) {
   disableAuthButtons(false);
   setAuthMessage(configWarning, 'error');
 } else {
-  firebase.initializeApp(firebaseConfig);
+  firebase.initializeApp(activeFirebaseConfig);
   auth = firebase.auth();
   db = firebase.firestore();
   disableAuthButtons(false);
