@@ -1,3 +1,51 @@
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import {
+  getAnalytics,
+  isSupported as isAnalyticsSupported,
+  logEvent
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js';
+
+const firebaseConfig = {
+  apiKey: 'AIzaSyDNd5MYXVX1LRYzAoI1aNpmQMPWsUTXtJA',
+  authDomain: 'skt-takip-88f52.firebaseapp.com',
+  projectId: 'skt-takip-88f52',
+  storageBucket: 'skt-takip-88f52.firebasestorage.app',
+  messagingSenderId: '857363805721',
+  appId: '1:857363805721:web:9cbcf58fc17ccd81851c88',
+  measurementId: 'G-J9RYRNT8QJ'
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const isBrowserEnvironment = typeof window !== 'undefined' && typeof document !== 'undefined';
+let analyticsInstance = null;
+
+const analyticsReady = isBrowserEnvironment
+  ? isAnalyticsSupported()
+      .then((supported) => {
+        if (supported) {
+          analyticsInstance = getAnalytics(firebaseApp);
+          logEvent(analyticsInstance, 'dashboard_opened');
+        }
+        return supported;
+      })
+      .catch((error) => {
+        console.warn('Firebase Analytics desteklenmiyor veya başlatılamadı.', error);
+        return false;
+      })
+  : Promise.resolve(false);
+
+function trackEvent(name, params = {}) {
+  analyticsReady
+    .then((supported) => {
+      if (supported && analyticsInstance) {
+        logEvent(analyticsInstance, name, params);
+      }
+    })
+    .catch(() => {
+      /* yoksay */
+    });
+}
+
 const stockMap = new Map();
 const productCatalog = new Map();
 const metrics = {
@@ -811,9 +859,11 @@ function exportInventory() {
       warnings: ['İndirilecek stok verisi bulunamadı.'],
       totalQuantityChange: 0
     }, 'Stok', 'Bilgilendirme');
+    trackEvent('inventory_export_empty', { reason: 'no_data' });
     return;
   }
 
+  const totalQuantity = entries.reduce((sum, entry) => sum + Number(entry.quantity || 0), 0);
   const rows = entries
     .sort((a, b) => a.code.localeCompare(b.code, 'tr'))
     .map((entry) => ({
@@ -832,6 +882,10 @@ function exportInventory() {
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Güncel Stok');
   XLSX.writeFile(workbook, `stok-durumu-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  trackEvent('inventory_exported', {
+    sku_count: rows.length,
+    total_quantity: totalQuantity
+  });
 }
 
 function downloadTemplate() {
@@ -851,6 +905,7 @@ function downloadTemplate() {
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Stok Hareketi');
   XLSX.writeFile(workbook, 'stok-hareket-sablonu.xlsx');
+  trackEvent('template_downloaded', { sample_rows: rows.length });
 }
 
 function handleFileInput(event) {
@@ -866,6 +921,14 @@ function handleFileInput(event) {
     .then((details) => {
       appendSummary(details, file.name);
       updateMetrics(details);
+      trackEvent('excel_upload_processed', {
+        action,
+        file_name: file.name,
+        total_rows: details.total,
+        processed_rows: details.affected,
+        skipped_rows: details.skipped,
+        quantity_change: details.totalQuantityChange
+      });
     })
     .catch((error) => {
       appendSummary({
@@ -878,6 +941,11 @@ function handleFileInput(event) {
       }, file.name);
       metrics.warnings += 1;
       updateMetrics();
+      trackEvent('excel_upload_failed', {
+        action,
+        file_name: file.name,
+        message: error.message
+      });
     })
     .finally(() => {
       input.value = '';
@@ -979,6 +1047,9 @@ function bootstrapInitialData() {
     warnings: [],
     totalQuantityChange: initialCatalog.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
   }, 'Başlangıç Verisi', 'Sistem');
+  trackEvent('initial_inventory_seeded', {
+    sku_count: initialCatalog.length
+  });
 }
 
 function bindEvents() {

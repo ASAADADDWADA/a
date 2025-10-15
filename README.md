@@ -9,6 +9,7 @@ Bu depo, Excel dosyalarını kullanarak stok yönetimi yapabileceğiniz profesyo
 - Stok sağlığı dağılımı, aksiyon merkezi ve kategori bazlı grafiklerle profesyonel analiz sunar,
 - Seçilen ürün için detay kartında stok durumu, lokasyon ve açıklamaları anlık gösterir,
 - İstendiğinde stok listesini tekrar Excel olarak indirmenize imkân tanır.
+- Firebase Analytics entegrasyonu sayesinde Excel yüklemeleri, ihracatlar ve şablon indirmeleri gibi kritik aksiyonlar ölçümlenir.
 
 ## Nasıl Çalışır?
 
@@ -61,6 +62,14 @@ Kurulum gerektirmez; dosyayı açmanız yeterlidir. Dilerseniz basit bir http su
 
 - Vanilla HTML, CSS ve JavaScript
 - Excel dosya okuma/yazma işlemleri için [SheetJS](https://sheetjs.com/) (CDN üzerinden)
+- Kullanıcı aksiyonlarını takip etmek için [Firebase Analytics](https://firebase.google.com/products/analytics)
+
+## Firebase Analytics
+
+- Proje, `stock-tracker/app.js` içinde verilen yapılandırma bilgileri ile Firebase Analytics'i otomatik olarak başlatır.
+- Dashboard açıldığında, Excel yüklemeleri başarıyla işlendiğinde veya hata aldığında ve stok dışa aktarımları yapıldığında olaylar Firebase'e gönderilir.
+- Firebase konsolundan gerçek zamanlı etkinlikleri izleyebilir, gerekiyorsa `trackEvent` çağrılarını kendi iş akışınıza uyacak şekilde genişletebilirsiniz.
+- Analitik desteği olmayan tarayıcılarda veya yerel dosya erişiminde sorun yaşanırsa entegrasyon gracefully devre dışı bırakılır.
 
 ## Geliştirme
 
